@@ -1,0 +1,2144 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>プロフェッショナル自動見積作成システム</title>
+    <!-- PDF生成ライブラリ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --main-color: #2c5eff;
+            --main-color-light: #5a7fff;
+            --main-color-dark: #1a45d9;
+            --sub-color: #001350;
+            --sub-color-light: #002080;
+            --white: #ffffff;
+            --gray: #f9f9f9;
+            --light-gray: #f0f0f0;
+            --border-gray: #ddd;
+            --dark-gray: #6e7a8a;
+            --black: #222222;
+            --success: #4caf50;
+            --warning: #ff9800;
+            --danger: #f44336;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'メイリオ', sans-serif;
+        }
+
+        body {
+            background-color: var(--gray);
+            color: var(--black);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        header {
+            background-color: var(--white);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 15px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background-color: var(--main-color);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            margin-right: 10px;
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--sub-color);
+        }
+
+        main {
+            padding: 40px 0;
+        }
+
+        .tab-container {
+            display: flex;
+            margin-bottom: 20px;
+            background-color: var(--white);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            background-color: var(--white);
+            border-bottom: 3px solid var(--main-color);
+            color: var(--main-color);
+        }
+
+        .tab:hover:not(.active) {
+            background-color: var(--light-gray);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .card {
+            background-color: var(--white);
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--light-gray);
+            padding-bottom: 10px;
+        }
+
+        .card-title-icon {
+            width: 30px;
+            height: 30px;
+            background-color: var(--main-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            margin-right: 10px;
+            font-size: 14px;
+        }
+
+        h1, h2, h3 {
+            color: var(--sub-color);
+        }
+
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            margin-left: -10px;
+            margin-right: -10px;
+            margin-bottom: 10px;
+        }
+
+        .form-group {
+            padding: 0 10px;
+            margin-bottom: 20px;
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .form-group.full-width {
+            flex: 0 0 100%;
+        }
+
+        .form-group.half-width {
+            flex: 0 0 50%;
+        }
+
+        @media (max-width: 768px) {
+            .form-group.half-width {
+                flex: 0 0 100%;
+            }
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: var(--sub-color);
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-gray);
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--main-color);
+            box-shadow: 0 0 0 3px rgba(44, 94, 255, 0.2);
+        }
+
+        .form-error {
+            color: var(--danger);
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        button {
+            background-color: var(--main-color);
+            color: var(--white);
+            border: none;
+            border-radius: 6px;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--main-color-dark);
+        }
+
+        button:disabled {
+            background-color: var(--dark-gray);
+            cursor: not-allowed;
+        }
+
+        button.secondary {
+            background-color: var(--white);
+            color: var(--main-color);
+            border: 1px solid var(--main-color);
+        }
+
+        button.secondary:hover {
+            background-color: #f0f5ff;
+        }
+
+        button.danger {
+            background-color: var(--white);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+
+        button.danger:hover {
+            background-color: #fff5f5;
+        }
+
+        button.warning {
+            background-color: var(--white);
+            color: var(--warning);
+            border: 1px solid var(--warning);
+        }
+
+        button.warning:hover {
+            background-color: #fffaf0;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .centered-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .wide-button {
+            width: 100%;
+            max-width: 300px;
+            margin: 0 auto;
+            display: block;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* 明細テーブル */
+        .item-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .item-table th {
+            background-color: var(--light-gray);
+            border: 1px solid var(--border-gray);
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+            color: var(--sub-color);
+        }
+
+        .item-table td {
+            border: 1px solid var(--border-gray);
+            padding: 10px;
+            vertical-align: middle;
+        }
+
+        .item-table input, .item-table select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .item-table .number-col {
+            width: 60px;
+        }
+
+        .item-table .qty-col, .item-table .unit-col {
+            width: 80px;
+        }
+
+        .item-table .price-col, .item-table .amount-col {
+            width: 120px;
+        }
+
+        .item-table .action-col {
+            width: 50px;
+            text-align: center;
+        }
+
+        .delete-btn {
+            background-color: var(--danger);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .add-row-btn {
+            display: inline-flex;
+            align-items: center;
+            background-color: var(--success);
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .add-row-btn:hover {
+            background-color: #3d8b40;
+        }
+
+        /* 合計部分 */
+        .totals-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            margin-top: 20px;
+            border-top: 2px solid var(--light-gray);
+            padding-top: 20px;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 10px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .total-label {
+            flex: 1;
+            font-weight: bold;
+            text-align: right;
+            padding-right: 20px;
+        }
+
+        .total-value {
+            width: 150px;
+            text-align: right;
+            font-weight: bold;
+        }
+
+        .final-total {
+            font-size: 1.2em;
+            color: var(--sub-color);
+            border-top: 1px solid var(--border-gray);
+            padding-top: 10px;
+        }
+
+        /* 見積結果カード */
+        .estimate-result {
+            border: 1px solid var(--main-color-light);
+            border-radius: 8px;
+            background-color: #f8faff;
+            padding: 20px;
+            margin-top: 30px;
+            position: relative;
+        }
+
+        .estimate-result h2 {
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--main-color-light);
+            padding-bottom: 10px;
+        }
+
+        .card-container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .price-card {
+            flex: 1;
+            min-width: 250px;
+            background-color: var(--white);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            border-top: 4px solid var(--main-color);
+            position: relative;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .price-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .price-card.selected {
+            border: 2px solid var(--main-color);
+            border-top-width: 4px;
+        }
+
+        .price-card.selected::before {
+            content: "✓";
+            position: absolute;
+            top: -12px;
+            right: -12px;
+            width: 30px;
+            height: 30px;
+            background-color: var(--main-color);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .price-label {
+            font-size: 14px;
+            color: var(--dark-gray);
+            margin-bottom: 5px;
+        }
+
+        .price-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--sub-color);
+        }
+
+        .price-tax {
+            font-size: 12px;
+            color: var(--dark-gray);
+            margin-top: 5px;
+        }
+
+        .price-detail {
+            margin-top: 15px;
+            font-size: 13px;
+            color: var(--dark-gray);
+            border-top: 1px dashed #eee;
+            padding-top: 15px;
+        }
+
+        .profit-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        /* ローディングスピナー */
+        .spinner {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            z-index: 1000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .spinner-circle {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(0, 0, 0, 0.1);
+            border-left-color: var(--main-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .spinner-text {
+            margin-top: 20px;
+            font-size: 16px;
+            color: var(--sub-color);
+            font-weight: bold;
+        }
+
+        .spinner-actions {
+            margin-top: 20px;
+            display: none;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* モーダル */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            overflow: auto;
+        }
+
+        .modal-content {
+            background-color: var(--white);
+            margin: 50px auto;
+            padding: 30px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+
+        .close {
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            color: var(--dark-gray);
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: var(--black);
+        }
+
+        footer {
+            background-color: var(--white);
+            border-top: 1px solid var(--light-gray);
+            padding: 20px 0;
+            text-align: center;
+            font-size: 14px;
+            color: var(--dark-gray);
+            margin-top: 40px;
+        }
+
+        /* 設定タブ用のスタイル */
+        .company-logo-preview {
+            max-width: 200px;
+            max-height: 100px;
+            margin-top: 10px;
+            display: block;
+            border: 1px solid var(--border-gray);
+            padding: 5px;
+        }
+
+        .logo-upload-container {
+            margin-top: 10px;
+        }
+
+        /* 見積書プレビュー用のスタイル */
+        .estimate-preview {
+            background-color: var(--white);
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        /* PDF用のスタイル */
+        .pdf-document {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 20mm;
+            margin: 0 auto;
+            background-color: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            display: none;
+            position: relative;
+        }
+
+        /* 見積書スタイル */
+        .estimate-sheet {
+            width: 100%;
+            font-size: 12px;
+        }
+
+        .estimate-header {
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .estimate-title {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .client-info {
+            margin-bottom: 20px;
+        }
+
+        .client-name {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .estimate-info {
+            margin-bottom: 20px;
+        }
+
+        .project-name {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .estimate-amount {
+            font-size: 18px;
+            font-weight: bold;
+            text-align: right;
+            margin-bottom: 20px;
+        }
+
+        .company-info {
+            position: absolute;
+            top: 0;
+            right: 0;
+            text-align: right;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .company-logo {
+            max-width: 200px;
+            max-height: 70px;
+            margin-bottom: 10px;
+        }
+
+        .company-stamp {
+            width: 80px;
+            height: 80px;
+            margin-left: auto;
+            border: 1px solid #ddd;
+            margin-top: 10px;
+        }
+
+        .estimate-detail {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .estimate-detail th,
+        .estimate-detail td {
+            border: 1px solid #000;
+            padding: 8px;
+        }
+
+        .estimate-detail th {
+            background-color: #f7f7f7;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .detail-subtotal {
+            text-align: right;
+            font-weight: bold;
+            padding: 8px;
+            border-top: 1px solid #000;
+        }
+
+        .estimate-totals {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            margin-bottom: 20px;
+        }
+
+        .estimate-totals th,
+        .estimate-totals td {
+            padding: 8px;
+            text-align: right;
+        }
+
+        .estimate-totals .total-label {
+            font-weight: bold;
+            width: 70%;
+        }
+
+        .estimate-notes {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-top: 20px;
+            background-color: #f9f9f9;
+        }
+
+        .notes-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .note-item {
+            margin-bottom: 5px;
+            line-height: 1.5;
+        }
+
+        /* 表をはみ出させないための調整 */
+        .long-text {
+            max-width: 350px;
+            word-break: break-word;
+        }
+
+        /* ヘルプアイコン */
+        .help-icon {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            background-color: var(--dark-gray);
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 16px;
+            font-size: 12px;
+            margin-left: 5px;
+            cursor: help;
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip .tooltip-text {
+            visibility: hidden;
+            width: 200px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* アラート */
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+        }
+
+        .alert-warning {
+            color: #8a6d3b;
+            background-color: #fcf8e3;
+            border-color: #faebcc;
+        }
+
+        .alert-info {
+            color: #31708f;
+            background-color: #d9edf7;
+            border-color: #bce8f1;
+        }
+
+        .alert-danger {
+            color: #a94442;
+            background-color: #f2dede;
+            border-color: #ebccd1;
+        }
+
+        /* デバッグパネル */
+        .debug-panel {
+            position: fixed;
+            bottom: 0;
+            right: 0;
+            width: 300px;
+            max-height: 200px;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            font-family: monospace;
+            font-size: 12px;
+            padding: 10px;
+            overflow-y: auto;
+            z-index: 10000;
+            display: none;
+        }
+
+        .debug-log {
+            margin-bottom: 5px;
+            border-bottom: 1px solid #444;
+            padding-bottom: 5px;
+        }
+
+        .debug-error {
+            color: #ff6b6b;
+        }
+
+        .debug-warn {
+            color: #feca57;
+        }
+
+        .debug-info {
+            color: #54a0ff;
+        }
+
+        /* 代替出力オプション */
+        .alternative-output {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        .alternative-output h3 {
+            margin-bottom: 10px;
+        }
+
+        /* Responsive styles */
+        @media (max-width: 768px) {
+            .form-row {
+                flex-direction: column;
+            }
+            
+            .form-group {
+                min-width: 100%;
+            }
+            
+            .card-container {
+                flex-direction: column;
+            }
+            
+            .modal-content {
+                width: 95%;
+                padding: 15px;
+            }
+            
+            .price-card {
+                min-width: 100%;
+            }
+        }
+
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            .estimate-preview, .estimate-preview * {
+                visibility: visible;
+            }
+            .estimate-preview {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                box-shadow: none;
+                padding: 0;
+            }
+            header, footer, .button-container, .tab-container {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container header-content">
+            <div class="logo">
+                <div class="logo-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                        <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                    </svg>
+                </div>
+                <div class="logo-text">プロフェッショナル自動見積作成システム</div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <div class="tab-container">
+                <div class="tab active" data-tab="input">見積入力</div>
+                <div class="tab" data-tab="preview">見積プレビュー</div>
+                <div class="tab" data-tab="settings">設定</div>
+            </div>
+
+            <!-- ストレージに関する警告メッセージ -->
+            <div id="storageWarning" class="alert alert-warning hidden">
+                <strong>注意:</strong> お使いの環境ではデータの保存機能が制限されています。会社情報が保存されない場合がありますが、見積作成には影響ありません。
+            </div>
+
+            <!-- 見積入力タブ -->
+            <div id="inputTab" class="tab-content active">
+                <form id="estimateForm">
+                    <!-- 基本情報 -->
+                    <div class="card">
+                        <div class="card-title">
+                            <div class="card-title-icon">1</div>
+                            <h2>基本情報</h2>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="client">見積提出先 <span class="form-required">*</span></label>
+                                <input type="text" id="client" name="client" placeholder="例: 株式会社長壁建築事務所" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="project">件名 <span class="form-required">*</span></label>
+                                <input type="text" id="project" name="project" placeholder="例: JR松井田駅 門扉修繕工事" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="estimateNumber">見積番号</label>
+                                <input type="text" id="estimateNumber" name="estimateNumber" placeholder="例: Q-0000000964">
+                                <div class="tooltip">
+                                    <span class="help-icon">?</span>
+                                    <span class="tooltip-text">空欄の場合は自動生成されます</span>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="estimateDate">見積日</label>
+                                <input type="date" id="estimateDate" name="estimateDate">
+                            </div>
+                            <div class="form-group">
+                                <label for="expiryDays">有効期限（日数）</label>
+                                <input type="number" id="expiryDays" name="expiryDays" value="30" min="1">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 明細情報 -->
+                    <div class="card">
+                        <div class="card-title">
+                            <div class="card-title-icon">2</div>
+                            <h2>明細情報</h2>
+                        </div>
+                        <table class="item-table" id="itemTable">
+                            <thead>
+                                <tr>
+                                    <th class="number-col">No.</th>
+                                    <th>摘要</th>
+                                    <th class="qty-col">数量</th>
+                                    <th class="unit-col">単位</th>
+                                    <th class="price-col">単価</th>
+                                    <th class="amount-col">金額</th>
+                                    <th class="action-col"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="itemTableBody">
+                                <!-- 明細行の追加箇所 -->
+                                <tr>
+                                    <td>1</td>
+                                    <td><input type="text" name="description[]" placeholder="商品/サービス名" required></td>
+                                    <td><input type="number" name="quantity[]" value="1" min="1" step="0.01" required></td>
+                                    <td>
+                                        <select name="unit[]">
+                                            <option value="式">式</option>
+                                            <option value="基">基</option>
+                                            <option value="組">組</option>
+                                            <option value="枚">枚</option>
+                                            <option value="本">本</option>
+                                            <option value="個">個</option>
+                                            <option value="台">台</option>
+                                            <option value="時間">時間</option>
+                                            <option value="日">日</option>
+                                            <option value="ヶ月">ヶ月</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="number" name="price[]" placeholder="0" min="0" required></td>
+                                    <td><input type="text" name="amount[]" readonly></td>
+                                    <td><button type="button" class="delete-btn" disabled>×</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <button type="button" id="addRowBtn" class="add-row-btn">+ 明細を追加</button>
+
+                        <div class="totals-container">
+                            <div class="total-row">
+                                <div class="total-label">小計（税抜）:</div>
+                                <div class="total-value" id="subtotal">¥0</div>
+                            </div>
+                            <div class="total-row">
+                                <div class="total-label">消費税（10%）:</div>
+                                <div class="total-value" id="tax">¥0</div>
+                            </div>
+                            <div class="total-row final-total">
+                                <div class="total-label">合計（税込）:</div>
+                                <div class="total-value" id="total">¥0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 備考 -->
+                    <div class="card">
+                        <div class="card-title">
+                            <div class="card-title-icon">3</div>
+                            <h2>備考</h2>
+                        </div>
+                        <div class="form-group">
+                            <label for="notes">備考（各行が※マークで始まります）</label>
+                            <textarea id="notes" name="notes" rows="5" placeholder="例:&#10;※ 本見積のフェンス柱設置は既存門扉柱の穴を再利用する仕様となっております。&#10;※ 門扉の開口は920㎜で柱の芯々1040㎜となっております。"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- 計算 -->
+                    <div class="centered-buttons">
+                        <button type="submit" id="calculateBtn">見積を計算する</button>
+                    </div>
+                </form>
+
+                <!-- 計算結果 -->
+                <div id="estimateResult" class="estimate-result hidden">
+                    <h2>見積計算結果</h2>
+                    <p>以下の3つの粗利率から選択してください。選択した粗利率で見積書を作成します。</p>
+                    <div class="card-container">
+                        <div class="price-card" id="option1" data-margin="30">
+                            <div class="price-label">粗利率 30%</div>
+                            <div class="price-value" id="price30">¥0</div>
+                            <div class="price-tax" id="priceWithTax30">税込: ¥0</div>
+                            <div class="price-detail">
+                                <div class="profit-row">
+                                    <span>原価合計:</span>
+                                    <span id="cost30">¥0</span>
+                                </div>
+                                <div class="profit-row">
+                                    <span>利益金額:</span>
+                                    <span id="profit30">¥0</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="price-card" id="option2" data-margin="32">
+                            <div class="price-label">粗利率 32%</div>
+                            <div class="price-value" id="price32">¥0</div>
+                            <div class="price-tax" id="priceWithTax32">税込: ¥0</div>
+                            <div class="price-detail">
+                                <div class="profit-row">
+                                    <span>原価合計:</span>
+                                    <span id="cost32">¥0</span>
+                                </div>
+                                <div class="profit-row">
+                                    <span>利益金額:</span>
+                                    <span id="profit32">¥0</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="price-card" id="option3" data-margin="35">
+                            <div class="price-label">粗利率 35%</div>
+                            <div class="price-value" id="price35">¥0</div>
+                            <div class="price-tax" id="priceWithTax35">税込: ¥0</div>
+                            <div class="price-detail">
+                                <div class="profit-row">
+                                    <span>原価合計:</span>
+                                    <span id="cost35">¥0</span>
+                                </div>
+                                <div class="profit-row">
+                                    <span>利益金額:</span>
+                                    <span id="profit35">¥0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="centered-buttons">
+                        <button id="previewBtn" class="secondary">見積書をプレビュー</button>
+                        <button id="downloadBtn">PDFダウンロード</button>
+                        <button id="printBtn" class="secondary">印刷</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 見積プレビュータブ -->
+            <div id="previewTab" class="tab-content">
+                <div class="card">
+                    <h2>見積書プレビュー</h2>
+                    <p>見積入力タブで情報を入力し、「見積を計算する」ボタンをクリックすると、ここにプレビューが表示されます。</p>
+                    <div id="previewContainer" class="estimate-preview"></div>
+                    <div class="centered-buttons hidden" id="previewButtons">
+                        <button id="previewDownloadBtn">PDFダウンロード</button>
+                        <button id="previewPrintBtn" class="secondary">印刷</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 設定タブ -->
+            <div id="settingsTab" class="tab-content">
+                <div class="card">
+                    <div class="card-title">
+                        <h2>会社情報設定</h2>
+                    </div>
+                    <form id="companySettingsForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="companyName">会社名</label>
+                                <input type="text" id="companyName" name="companyName" placeholder="例: 株式会社なないろハウジング">
+                            </div>
+                            <div class="form-group">
+                                <label for="companyPostal">郵便番号</label>
+                                <input type="text" id="companyPostal" name="companyPostal" placeholder="例: 370-2314">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="companyAddress">住所</label>
+                            <input type="text" id="companyAddress" name="companyAddress" placeholder="例: 群馬県富岡市田篠７５２－１">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="companyPhone">電話番号</label>
+                                <input type="text" id="companyPhone" name="companyPhone" placeholder="例: 0274-63-3974">
+                            </div>
+                            <div class="form-group">
+                                <label for="companyFax">FAX番号</label>
+                                <input type="text" id="companyFax" name="companyFax" placeholder="例: 0274-64-9003">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="companyLogo">会社ロゴ</label>
+                            <input type="file" id="companyLogo" name="companyLogo" accept="image/*">
+                            <div class="logo-upload-container">
+                                <img id="companyLogoPreview" class="company-logo-preview hidden" src="" alt="ロゴプレビュー">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="companyStamp">会社印影</label>
+                            <input type="file" id="companyStamp" name="companyStamp" accept="image/*">
+                            <div class="logo-upload-container">
+                                <img id="companyStampPreview" class="company-logo-preview hidden" src="" alt="印影プレビュー">
+                            </div>
+                        </div>
+                        <div class="centered-buttons">
+                            <button type="submit">設定を保存</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- 詳細設定 -->
+                <div class="card">
+                    <div class="card-title">
+                        <h2>詳細設定</h2>
+                    </div>
+                    <div class="form-group">
+                        <label for="debugMode">デバッグモード</label>
+                        <input type="checkbox" id="debugMode" style="width: auto;">
+                        <span>（PDF生成で問題が発生する場合にオンにしてください）</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="pdfTimeout">PDF生成タイムアウト（秒）</label>
+                        <input type="number" id="pdfTimeout" min="5" max="60" value="15">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- PDF生成用の非表示要素 -->
+    <div id="pdfContent" class="pdf-document">
+        <div id="pdfEstimateSheet" class="estimate-sheet">
+            <!-- PDF用の見積書がここに生成されます -->
+        </div>
+    </div>
+
+    <!-- ローディングスピナー -->
+    <div id="loadingSpinner" class="spinner hidden">
+        <div class="spinner-circle"></div>
+        <div class="spinner-text">PDFを生成中...</div>
+        <div class="spinner-actions" id="spinnerActions">
+            <button id="cancelPdfBtn" class="warning">キャンセル</button>
+            <button id="alternativePdfBtn" class="secondary">代替手段を表示</button>
+        </div>
+    </div>
+
+    <!-- デバッグパネル -->
+    <div id="debugPanel" class="debug-panel">
+        <div id="debugLogs"></div>
+    </div>
+
+    <footer>
+        <div class="container">
+            © 2025 プロフェッショナル自動見積作成システム All Rights Reserved.
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // デバッグログ用の関数
+            const debugMode = localStorage.getItem('debugMode') === 'true';
+            const debugPanel = document.getElementById('debugPanel');
+            const debugLogs = document.getElementById('debugLogs');
+            
+            if (debugMode) {
+                debugPanel.style.display = 'block';
+                document.getElementById('debugMode').checked = true;
+            }
+            
+            function debugLog(message, type = 'info') {
+                console.log(`[${type.toUpperCase()}] ${message}`);
+                
+                if (debugMode) {
+                    const logElement = document.createElement('div');
+                    logElement.className = `debug-log debug-${type}`;
+                    logElement.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                    debugLogs.appendChild(logElement);
+                    debugLogs.scrollTop = debugLogs.scrollHeight;
+                }
+            }
+
+            // LocalStorageが使用可能かチェック
+            let storageAvailable = false;
+            try {
+                localStorage.setItem('test', 'test');
+                localStorage.removeItem('test');
+                storageAvailable = true;
+            } catch (e) {
+                // LocalStorageが使用できない場合は警告を表示
+                document.getElementById('storageWarning').classList.remove('hidden');
+                debugLog('LocalStorage is not available', 'warn');
+            }
+
+            // 要素の取得
+            const estimateForm = document.getElementById('estimateForm');
+            const estimateResult = document.getElementById('estimateResult');
+            const itemTableBody = document.getElementById('itemTableBody');
+            const addRowBtn = document.getElementById('addRowBtn');
+            const subtotalElement = document.getElementById('subtotal');
+            const taxElement = document.getElementById('tax');
+            const totalElement = document.getElementById('total');
+            const calculateBtn = document.getElementById('calculateBtn');
+            const previewBtn = document.getElementById('previewBtn');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const printBtn = document.getElementById('printBtn');
+            const tabs = document.querySelectorAll('.tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+            const previewContainer = document.getElementById('previewContainer');
+            const previewButtons = document.getElementById('previewButtons');
+            const previewDownloadBtn = document.getElementById('previewDownloadBtn');
+            const previewPrintBtn = document.getElementById('previewPrintBtn');
+            const companySettingsForm = document.getElementById('companySettingsForm');
+            const companyLogoInput = document.getElementById('companyLogo');
+            const companyLogoPreview = document.getElementById('companyLogoPreview');
+            const companyStampInput = document.getElementById('companyStamp');
+            const companyStampPreview = document.getElementById('companyStampPreview');
+            const pdfContent = document.getElementById('pdfContent');
+            const pdfEstimateSheet = document.getElementById('pdfEstimateSheet');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const spinnerActions = document.getElementById('spinnerActions');
+            const cancelPdfBtn = document.getElementById('cancelPdfBtn');
+            const alternativePdfBtn = document.getElementById('alternativePdfBtn');
+            const debugModeCheckbox = document.getElementById('debugMode');
+            const pdfTimeoutInput = document.getElementById('pdfTimeout');
+            
+            // 現在の日付をデフォルトで設定
+            const today = new Date();
+            document.getElementById('estimateDate').valueAsDate = today;
+
+            // タイムアウト変数
+            let pdfGenerationTimeout = null;
+            let pdfTimeoutValue = parseInt(localStorage.getItem('pdfTimeout') || '15');
+            pdfTimeoutInput.value = pdfTimeoutValue;
+
+            // PDF生成の状態
+            let pdfGenerationCancelled = false;
+
+            // 共通変数
+            let currentTotalCost = 0;
+            let selectedMarginRate = 30;
+            let currentItems = [];
+            let companyInfo = {
+                name: '',
+                postal: '',
+                address: '',
+                phone: '',
+                fax: '',
+                logo: '',
+                stamp: ''
+            };
+
+            // LocalStorageから会社情報をロード（ストレージが利用可能な場合）
+            if (storageAvailable) {
+                loadCompanyInfo();
+                
+                // PDFタイムアウト値の読み込み
+                if (localStorage.getItem('pdfTimeout')) {
+                    pdfTimeoutValue = parseInt(localStorage.getItem('pdfTimeout'));
+                    pdfTimeoutInput.value = pdfTimeoutValue;
+                }
+            }
+
+            // デバッグモードの切り替え
+            debugModeCheckbox.addEventListener('change', function() {
+                try {
+                    localStorage.setItem('debugMode', this.checked);
+                    debugPanel.style.display = this.checked ? 'block' : 'none';
+                    
+                    if (this.checked) {
+                        debugLog('Debug mode enabled', 'info');
+                    }
+                } catch (e) {
+                    console.warn('Failed to save debug mode setting', e);
+                }
+            });
+
+            // PDFタイムアウト値の保存
+            pdfTimeoutInput.addEventListener('change', function() {
+                const value = parseInt(this.value) || 15;
+                if (value < 5) this.value = 5;
+                if (value > 60) this.value = 60;
+                
+                pdfTimeoutValue = parseInt(this.value);
+                
+                try {
+                    localStorage.setItem('pdfTimeout', pdfTimeoutValue);
+                    debugLog(`PDF timeout set to ${pdfTimeoutValue} seconds`, 'info');
+                } catch (e) {
+                    console.warn('Failed to save PDF timeout setting', e);
+                }
+            });
+
+            // PDF生成キャンセルボタン
+            cancelPdfBtn.addEventListener('click', function() {
+                pdfGenerationCancelled = true;
+                hideLoadingSpinner();
+                debugLog('PDF generation cancelled by user', 'warn');
+            });
+
+            // 代替手段ボタン
+            alternativePdfBtn.addEventListener('click', function() {
+                hideLoadingSpinner();
+                
+                // 印刷ダイアログを表示
+                window.print();
+                
+                debugLog('Using alternative output method (print)', 'info');
+            });
+
+            // ローディングのタイムアウト処理
+            function setupLoadingTimeout() {
+                // 既存のタイムアウトをクリア
+                if (pdfGenerationTimeout) {
+                    clearTimeout(pdfGenerationTimeout);
+                }
+                
+                // 8秒後にキャンセルボタンを表示
+                setTimeout(() => {
+                    if (loadingSpinner.style.display !== 'none') {
+                        spinnerActions.style.display = 'block';
+                        debugLog('PDF generation is taking longer than expected', 'warn');
+                    }
+                }, 8000);
+                
+                // 設定された秒数後に強制的にローディングを非表示
+                pdfGenerationTimeout = setTimeout(() => {
+                    if (loadingSpinner.style.display !== 'none') {
+                        hideLoadingSpinner();
+                        alert('PDF生成がタイムアウトしました。ブラウザの印刷機能を使用して出力してください。');
+                        debugLog('PDF generation timed out', 'error');
+                    }
+                }, pdfTimeoutValue * 1000);
+            }
+
+            // ローディングスピナーを非表示
+            function hideLoadingSpinner() {
+                loadingSpinner.style.display = 'none';
+                spinnerActions.style.display = 'none';
+                
+                if (pdfGenerationTimeout) {
+                    clearTimeout(pdfGenerationTimeout);
+                    pdfGenerationTimeout = null;
+                }
+                
+                // PDF用コンテンツを非表示
+                pdfContent.style.display = 'none';
+            }
+
+            // タブ切り替え
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tabContents.forEach(c => c.classList.remove('active'));
+                    
+                    tab.classList.add('active');
+                    const tabId = tab.dataset.tab + 'Tab';
+                    document.getElementById(tabId).classList.add('active');
+                    
+                    // プレビュータブに切り替えた場合
+                    if (tab.dataset.tab === 'preview' && calculateBtn.dataset.calculated === 'true') {
+                        updatePreview();
+                    }
+                });
+            });
+
+            // 明細行の追加
+            addRowBtn.addEventListener('click', function() {
+                addItemRow();
+                updateAmounts();
+            });
+
+            // フォーム送信（見積計算）
+            estimateForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                if (!validateForm()) {
+                    return;
+                }
+                
+                calculateEstimate();
+                
+                // 計算済みフラグを設定
+                calculateBtn.dataset.calculated = 'true';
+                
+                // 結果を表示
+                estimateResult.classList.remove('hidden');
+                estimateResult.scrollIntoView({ behavior: 'smooth' });
+            });
+
+            // 粗利率の選択処理
+            document.querySelectorAll('.price-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    document.querySelectorAll('.price-card').forEach(c => c.classList.remove('selected'));
+                    this.classList.add('selected');
+                    selectedMarginRate = this.dataset.margin;
+                    
+                    debugLog(`Selected margin rate: ${selectedMarginRate}%`, 'info');
+                });
+            });
+
+            // 見積書プレビューボタンの処理
+            previewBtn.addEventListener('click', function() {
+                // プレビュータブに切り替え
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+                
+                document.querySelector('[data-tab="preview"]').classList.add('active');
+                document.getElementById('previewTab').classList.add('active');
+                
+                updatePreview();
+            });
+
+            // PDFダウンロードボタンの処理
+            downloadBtn.addEventListener('click', function() {
+                generatePDF();
+            });
+
+            previewDownloadBtn.addEventListener('click', function() {
+                generatePDF();
+            });
+
+            // 印刷ボタンの処理
+            printBtn.addEventListener('click', function() {
+                // プレビュータブに切り替え
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+                
+                document.querySelector('[data-tab="preview"]').classList.add('active');
+                document.getElementById('previewTab').classList.add('active');
+                
+                updatePreview();
+                
+                // 少し遅延させて印刷ダイアログを表示
+                setTimeout(() => {
+                    window.print();
+                }, 500);
+            });
+
+            previewPrintBtn.addEventListener('click', function() {
+                window.print();
+            });
+
+            // 会社情報フォームの送信処理
+            companySettingsForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                saveCompanyInfo();
+            });
+
+            // ロゴのプレビュー表示
+            companyLogoInput.addEventListener('change', function(e) {
+                if (this.files && this.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        companyLogoPreview.src = e.target.result;
+                        companyLogoPreview.classList.remove('hidden');
+                    };
+                    reader.readAsDataURL(this.files[0]);
+                }
+            });
+
+            // 印影のプレビュー表示
+            companyStampInput.addEventListener('change', function(e) {
+                if (this.files && this.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        companyStampPreview.src = e.target.result;
+                        companyStampPreview.classList.remove('hidden');
+                    };
+                    reader.readAsDataURL(this.files[0]);
+                }
+            });
+
+            // 明細行の初期表示
+            updateAmounts();
+
+            // 会社情報をローカルストレージからロード
+            function loadCompanyInfo() {
+                try {
+                    const storedCompanyInfo = localStorage.getItem('companyInfo');
+                    if (storedCompanyInfo) {
+                        companyInfo = JSON.parse(storedCompanyInfo);
+                        
+                        // フォームに値を設定
+                        document.getElementById('companyName').value = companyInfo.name || '';
+                        document.getElementById('companyPostal').value = companyInfo.postal || '';
+                        document.getElementById('companyAddress').value = companyInfo.address || '';
+                        document.getElementById('companyPhone').value = companyInfo.phone || '';
+                        document.getElementById('companyFax').value = companyInfo.fax || '';
+                        
+                        // ロゴと印影のプレビュー
+                        if (companyInfo.logo) {
+                            companyLogoPreview.src = companyInfo.logo;
+                            companyLogoPreview.classList.remove('hidden');
+                        }
+                        
+                        if (companyInfo.stamp) {
+                            companyStampPreview.src = companyInfo.stamp;
+                            companyStampPreview.classList.remove('hidden');
+                        }
+                        
+                        debugLog('Company information loaded from storage', 'info');
+                    }
+                } catch (e) {
+                    console.warn('会社情報の読み込みに失敗しました', e);
+                    debugLog('Failed to load company information: ' + e.message, 'error');
+                }
+            }
+
+            // 会社情報を保存
+            function saveCompanyInfo() {
+                companyInfo.name = document.getElementById('companyName').value;
+                companyInfo.postal = document.getElementById('companyPostal').value;
+                companyInfo.address = document.getElementById('companyAddress').value;
+                companyInfo.phone = document.getElementById('companyPhone').value;
+                companyInfo.fax = document.getElementById('companyFax').value;
+                
+                // ロゴと印影の保存
+                if (companyLogoPreview.src && !companyLogoPreview.classList.contains('hidden')) {
+                    companyInfo.logo = companyLogoPreview.src;
+                }
+                
+                if (companyStampPreview.src && !companyStampPreview.classList.contains('hidden')) {
+                    companyInfo.stamp = companyStampPreview.src;
+                }
+                
+                if (storageAvailable) {
+                    try {
+                        localStorage.setItem('companyInfo', JSON.stringify(companyInfo));
+                        alert('会社情報を保存しました');
+                        debugLog('Company information saved to storage', 'info');
+                    } catch (e) {
+                        console.warn('会社情報の保存に失敗しました', e);
+                        debugLog('Failed to save company information: ' + e.message, 'error');
+                        alert('会社情報の保存に失敗しました。ブラウザの設定を確認してください。');
+                    }
+                } else {
+                    alert('この環境では会社情報を保存できません。ただし、現在の設定は見積作成に使用されます。');
+                    debugLog('Storage not available, company information not saved', 'warn');
+                }
+            }
+
+            // 明細行を追加
+            function addItemRow() {
+                const rowCount = itemTableBody.rows.length;
+                const row = itemTableBody.insertRow();
+                
+                row.innerHTML = `
+                    <td>${rowCount + 1}</td>
+                    <td><input type="text" name="description[]" placeholder="商品/サービス名" required></td>
+                    <td><input type="number" name="quantity[]" value="1" min="1" step="0.01" required></td>
+                    <td>
+                        <select name="unit[]">
+                            <option value="式">式</option>
+                            <option value="基">基</option>
+                            <option value="組">組</option>
+                            <option value="枚">枚</option>
+                            <option value="本">本</option>
+                            <option value="個">個</option>
+                            <option value="台">台</option>
+                            <option value="時間">時間</option>
+                            <option value="日">日</option>
+                            <option value="ヶ月">ヶ月</option>
+                        </select>
+                    </td>
+                    <td><input type="number" name="price[]" placeholder="0" min="0" required></td>
+                    <td><input type="text" name="amount[]" readonly></td>
+                    <td><button type="button" class="delete-btn">×</button></td>
+                `;
+                
+                // 行の削除ボタンのイベントリスナーを追加
+                const deleteBtn = row.querySelector('.delete-btn');
+                deleteBtn.addEventListener('click', function() {
+                    if (itemTableBody.rows.length > 1) {
+                        row.remove();
+                        renumberRows();
+                        updateAmounts();
+                    }
+                });
+                
+                // 金額自動計算のイベントリスナーを追加
+                const qtyInput = row.querySelector('input[name="quantity[]"]');
+                const priceInput = row.querySelector('input[name="price[]"]');
+                
+                qtyInput.addEventListener('input', updateAmounts);
+                priceInput.addEventListener('input', updateAmounts);
+                
+                // 最初の行の削除ボタンを有効化
+                if (rowCount === 0) {
+                    deleteBtn.disabled = false;
+                } else if (rowCount === 1) {
+                    itemTableBody.rows[0].querySelector('.delete-btn').disabled = false;
+                }
+            }
+
+            // 行番号を更新
+            function renumberRows() {
+                const rows = itemTableBody.rows;
+                for (let i = 0; i < rows.length; i++) {
+                    rows[i].cells[0].textContent = i + 1;
+                }
+            }
+
+            // 金額の計算更新
+            function updateAmounts() {
+                const rows = itemTableBody.rows;
+                let subtotal = 0;
+                
+                for (let i = 0; i < rows.length; i++) {
+                    const qtyInput = rows[i].querySelector('input[name="quantity[]"]');
+                    const priceInput = rows[i].querySelector('input[name="price[]"]');
+                    const amountInput = rows[i].querySelector('input[name="amount[]"]');
+                    
+                    const qty = parseFloat(qtyInput.value) || 0;
+                    const price = parseFloat(priceInput.value) || 0;
+                    const amount = qty * price;
+                    
+                    amountInput.value = formatCurrency(amount);
+                    subtotal += amount;
+                }
+                
+                const tax = subtotal * 0.1;
+                const total = subtotal + tax;
+                
+                subtotalElement.textContent = formatCurrency(subtotal);
+                taxElement.textContent = formatCurrency(tax);
+                totalElement.textContent = formatCurrency(total);
+                
+                currentTotalCost = subtotal;
+            }
+
+            // 見積計算
+            function calculateEstimate() {
+                // フォームからアイテムを取得
+                currentItems = [];
+                const rows = itemTableBody.rows;
+                
+                for (let i = 0; i < rows.length; i++) {
+                    const description = rows[i].querySelector('input[name="description[]"]').value;
+                    const quantity = parseFloat(rows[i].querySelector('input[name="quantity[]"]').value);
+                    const unit = rows[i].querySelector('select[name="unit[]"]').value;
+                    const price = parseFloat(rows[i].querySelector('input[name="price[]"]').value);
+                    const amount = quantity * price;
+                    
+                    currentItems.push({
+                        no: i + 1,
+                        description,
+                        quantity,
+                        unit,
+                        price,
+                        amount
+                    });
+                }
+
+                // 粗利率ごとの計算
+                const marginRates = [0.3, 0.32, 0.35];
+                
+                marginRates.forEach(rate => {
+                    const ratePercent = Math.round(rate * 100);
+                    const adjustedPrice = Math.round(currentTotalCost / (1 - rate));
+                    const profit = adjustedPrice - currentTotalCost;
+                    const priceWithTax = Math.round(adjustedPrice * 1.1);
+                    
+                    document.getElementById(`price${ratePercent}`).textContent = formatCurrency(adjustedPrice);
+                    document.getElementById(`priceWithTax${ratePercent}`).textContent = `税込: ${formatCurrency(priceWithTax)}`;
+                    document.getElementById(`cost${ratePercent}`).textContent = formatCurrency(currentTotalCost);
+                    document.getElementById(`profit${ratePercent}`).textContent = formatCurrency(profit);
+                });
+                
+                // 最初の粗利率を選択状態にする
+                document.querySelectorAll('.price-card').forEach((card, index) => {
+                    card.classList.toggle('selected', index === 0);
+                });
+                
+                selectedMarginRate = 30;
+                
+                debugLog(`Estimate calculated with total cost of ${formatCurrency(currentTotalCost)}`, 'info');
+            }
+
+            // 見積プレビューの更新
+            function updatePreview() {
+                if (!calculateBtn.dataset.calculated) {
+                    previewContainer.innerHTML = '<p>見積がまだ計算されていません。見積入力タブで情報を入力し、「見積を計算する」ボタンをクリックしてください。</p>';
+                    previewButtons.classList.add('hidden');
+                    return;
+                }
+                
+                previewContainer.innerHTML = generateEstimateHTML();
+                previewButtons.classList.remove('hidden');
+                
+                debugLog('Preview updated', 'info');
+            }
+
+            // 見積書HTML生成
+            function generateEstimateHTML() {
+                try {
+                    const client = document.getElementById('client').value;
+                    const project = document.getElementById('project').value;
+                    const estimateNumber = document.getElementById('estimateNumber').value || generateEstimateNumber();
+                    const estimateDate = document.getElementById('estimateDate').value;
+                    const formattedDate = formatDateJP(estimateDate);
+                    
+                    const expiryDays = parseInt(document.getElementById('expiryDays').value) || 30;
+                    const expiryDate = new Date(estimateDate);
+                    expiryDate.setDate(expiryDate.getDate() + expiryDays);
+                    const formattedExpiryDate = formatDateJP(expiryDate.toISOString().split('T')[0]);
+                    
+                    const notes = document.getElementById('notes').value;
+                    const noteItems = notes.split('\n').filter(note => note.trim() !== '');
+                    
+                    // 選択された粗利率で価格を計算
+                    const rate = selectedMarginRate / 100;
+                    const adjustedPrice = Math.round(currentTotalCost / (1 - rate));
+                    const tax = Math.round(adjustedPrice * 0.1);
+                    const total = adjustedPrice + tax;
+                    
+                    let itemsHTML = '';
+                    
+                    currentItems.forEach(item => {
+                        itemsHTML += `
+                            <tr>
+                                <td style="text-align: center;">${item.no}</td>
+                                <td class="long-text">${item.description}</td>
+                                <td style="text-align: center;">${item.quantity}</td>
+                                <td style="text-align: center;">${item.unit}</td>
+                                <td style="text-align: right;">${formatCurrency(item.price, false)}</td>
+                                <td style="text-align: right;">${formatCurrency(item.amount, false)}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    let notesHTML = '';
+                    if (noteItems.length > 0) {
+                        notesHTML = `
+                            <div class="estimate-notes">
+                                <div class="notes-title">備考</div>
+                                ${noteItems.map(note => `<div class="note-item">${note}</div>`).join('')}
+                            </div>
+                        `;
+                    }
+                    
+                    const html = `
+                        <div class="estimate-sheet">
+                            <div class="estimate-header">
+                                <div class="estimate-title">御見積書</div>
+                                
+                                <div class="client-info">
+                                    <div class="client-name">${client} 御中</div>
+                                </div>
+                                
+                                <div class="company-info">
+                                    ${companyInfo.name ? `<div>${companyInfo.name}</div>` : ''}
+                                    ${companyInfo.postal ? `<div>${companyInfo.postal}</div>` : ''}
+                                    ${companyInfo.address ? `<div>${companyInfo.address}</div>` : ''}
+                                    ${companyInfo.phone ? `<div>TEL: ${companyInfo.phone}</div>` : ''}
+                                    ${companyInfo.fax ? `<div>FAX: ${companyInfo.fax}</div>` : ''}
+                                    ${companyInfo.stamp ? `<img src="${companyInfo.stamp}" class="company-stamp" alt="印影">` : ''}
+                                </div>
+                            </div>
+                            
+                            <div style="margin-bottom: 10px;">下記の通り御見積もり申し上げます。</div>
+                            
+                            <div class="estimate-info">
+                                <table style="width: 100%;">
+                                    <tr>
+                                        <td style="width: 15%;">件名</td>
+                                        <td style="width: 85%;">${project}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                                <div style="flex: 1;"></div>
+                                <div style="width: 200px;">
+                                    <table style="width: 100%;">
+                                        <tr>
+                                            <td>見積日</td>
+                                            <td>${formattedDate}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>見積番号</td>
+                                            <td>${estimateNumber}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>有効期限</td>
+                                            <td>${formattedExpiryDate}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div class="estimate-amount">見積金額 ${formatCurrency(total)}</div>
+                            
+                            <table class="estimate-detail">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 5%;">No.</th>
+                                        <th style="width: 45%;">摘要</th>
+                                        <th style="width: 10%;">数量</th>
+                                        <th style="width: 10%;">単位</th>
+                                        <th style="width: 15%;">単価</th>
+                                        <th style="width: 15%;">明細金額</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${itemsHTML}
+                                </tbody>
+                            </table>
+                            
+                            <div style="width: 100%; display: flex; justify-content: flex-end;">
+                                <table style="width: 300px; margin-top: 20px;">
+                                    <tr>
+                                        <td style="text-align: right; padding: 5px; font-weight: bold;">小計</td>
+                                        <td style="text-align: right; padding: 5px;">${formatCurrency(adjustedPrice)}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="text-align: right; padding: 5px; font-weight: bold;">消費税</td>
+                                        <td style="text-align: right; padding: 5px;">${formatCurrency(tax)}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="text-align: right; padding: 5px; font-weight: bold; border-top: 1px solid #000;">合計</td>
+                                        <td style="text-align: right; padding: 5px; font-weight: bold; border-top: 1px solid #000;">${formatCurrency(total)}</td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="2" style="padding-top: 10px;">
+                                            <table style="width: 100%;">
+                                                <tr>
+                                                    <td style="text-align: left;">内訳</td>
+                                                    <td style="text-align: right;">10%対象(税抜)</td>
+                                                    <td style="text-align: right;">${formatCurrency(adjustedPrice)}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td></td>
+                                                    <td style="text-align: right;">10%消費税</td>
+                                                    <td style="text-align: right;">${formatCurrency(tax)}</td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                            
+                            ${notesHTML}
+                        </div>
+                    `;
+                    
+                    return html;
+                } catch (e) {
+                    debugLog('Error generating estimate HTML: ' + e.message, 'error');
+                    console.error('Error generating estimate HTML:', e);
+                    return `<div class="alert alert-danger">見積書の生成中にエラーが発生しました。: ${e.message}</div>`;
+                }
+            }
+
+            // PDF生成
+            async function generatePDF() {
+                try {
+                    // キャンセルフラグをリセット
+                    pdfGenerationCancelled = false;
+                    
+                    // ローディング表示
+                    loadingSpinner.style.display = 'flex';
+                    spinnerActions.style.display = 'none';
+                    
+                    // タイムアウト設定
+                    setupLoadingTimeout();
+                    
+                    debugLog('Starting PDF generation', 'info');
+                    
+                    // PDF用の見積書内容を生成
+                    try {
+                        pdfEstimateSheet.innerHTML = generateEstimateHTML();
+                        debugLog('PDF estimate sheet HTML generated', 'info');
+                    } catch (e) {
+                        debugLog('Failed to generate PDF estimate sheet HTML: ' + e.message, 'error');
+                        throw new Error('見積書HTMLの生成に失敗しました');
+                    }
+                    
+                    // ロゴの追加（あれば）
+                    if (companyInfo.logo) {
+                        try {
+                            const logoImg = document.createElement('img');
+                            logoImg.src = companyInfo.logo;
+                            logoImg.className = 'company-logo';
+                            logoImg.style.position = 'absolute';
+                            logoImg.style.top = '20px';
+                            logoImg.style.right = '0';
+                            logoImg.style.maxWidth = '200px';
+                            logoImg.style.maxHeight = '70px';
+                            
+                            // ロゴ画像が既に存在するか確認
+                            const existingLogo = pdfEstimateSheet.querySelector('.company-logo');
+                            if (!existingLogo) {
+                                pdfEstimateSheet.querySelector('.estimate-header').appendChild(logoImg);
+                                debugLog('Company logo added to PDF content', 'info');
+                            }
+                        } catch (e) {
+                            debugLog('Error adding company logo: ' + e.message, 'warn');
+                            // ロゴのエラーは致命的ではないので続行
+                        }
+                    }
+                    
+                    // PDFコンテンツを表示
+                    pdfContent.style.display = 'block';
+                    
+                    // 少し待ってからPDF生成開始
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    
+                    if (pdfGenerationCancelled) {
+                        debugLog('PDF generation was cancelled', 'warn');
+                        return;
+                    }
+                    
+                    debugLog('Initializing jsPDF', 'info');
+                    
+                    try {
+                        const { jsPDF } = window.jspdf;
+                        
+                        debugLog('jsPDF initialized, starting html2canvas', 'info');
+                        
+                        // html2canvasの設定
+                        const html2canvasOptions = {
+                            scale: 2,
+                            useCORS: true,
+                            allowTaint: true,
+                            foreignObjectRendering: false,
+                            logging: debugMode
+                        };
+                        
+                        debugLog('html2canvas options: ' + JSON.stringify(html2canvasOptions), 'info');
+                        
+                        const canvas = await html2canvas(pdfContent, html2canvasOptions);
+                        
+                        debugLog('Canvas created successfully, width: ' + canvas.width + ', height: ' + canvas.height, 'info');
+                        
+                        if (pdfGenerationCancelled) {
+                            debugLog('PDF generation was cancelled after canvas creation', 'warn');
+                            return;
+                        }
+                        
+                        try {
+                            const imgData = canvas.toDataURL('image/png');
+                            debugLog('Canvas converted to image data', 'info');
+                            
+                            const pdf = new jsPDF({
+                                orientation: 'portrait',
+                                unit: 'mm',
+                                format: 'a4'
+                            });
+                            
+                            const imgWidth = 210;
+                            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                            
+                            pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+                            
+                            // ファイル名設定
+                            const client = document.getElementById('client').value;
+                            const today = new Date();
+                            const dateStr = `${today.getFullYear()}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}`;
+                            const fileName = `見積書_${client.replace(/\s+/g, '_')}_${dateStr}.pdf`;
+                            
+                            debugLog('PDF created, attempting to save as: ' + fileName, 'info');
+                            
+                            pdf.save(fileName);
+                            
+                            debugLog('PDF saved successfully', 'info');
+                        } catch (e) {
+                            debugLog('PDF generation error (jsPDF): ' + e.message, 'error');
+                            throw new Error('PDFの生成中にエラーが発生しました: ' + e.message);
+                        }
+                    } catch (e) {
+                        debugLog('PDF generation error (html2canvas): ' + e.message, 'error');
+                        throw new Error('画像の生成中にエラーが発生しました: ' + e.message);
+                    }
+                } catch (e) {
+                    debugLog('PDF generation failed: ' + e.message, 'error');
+                    console.error('PDF生成エラー:', e);
+                    alert('PDF生成中にエラーが発生しました。ブラウザの印刷機能を使用してください。');
+                    
+                    // エラー発生時は印刷ダイアログを表示
+                    if (confirm('ブラウザの印刷機能を使用しますか？')) {
+                        window.print();
+                    }
+                } finally {
+                    // 必ずPDFコンテンツを非表示に戻す
+                    pdfContent.style.display = 'none';
+                    
+                    // ローディング非表示
+                    hideLoadingSpinner();
+                    
+                    debugLog('PDF generation process completed', 'info');
+                }
+            }
+
+            // 見積番号の生成
+            function generateEstimateNumber() {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = (now.getMonth() + 1).toString().padStart(2, '0');
+                const day = now.getDate().toString().padStart(2, '0');
+                const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+                
+                return `Q-${year}${month}${day}-${random}`;
+            }
+
+            // 日付の日本語フォーマット
+            function formatDateJP(dateString) {
+                const date = new Date(dateString);
+                return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+            }
+
+            // 金額のフォーマット
+            function formatCurrency(amount, withSymbol = true) {
+                const formattedAmount = Math.round(amount).toLocaleString();
+                return withSymbol ? `¥${formattedAmount}` : formattedAmount;
+            }
+
+            // フォームのバリデーション
+            function validateForm() {
+                const client = document.getElementById('client').value;
+                const project = document.getElementById('project').value;
+                
+                if (!client) {
+                    alert('見積提出先を入力してください');
+                    return false;
+                }
+                
+                if (!project) {
+                    alert('件名を入力してください');
+                    return false;
+                }
+                
+                const rows = itemTableBody.rows;
+                for (let i = 0; i < rows.length; i++) {
+                    const description = rows[i].querySelector('input[name="description[]"]').value;
+                    const quantity = rows[i].querySelector('input[name="quantity[]"]').value;
+                    const price = rows[i].querySelector('input[name="price[]"]').value;
+                    
+                    if (!description) {
+                        alert(`${i + 1}行目の摘要を入力してください`);
+                        return false;
+                    }
+                    
+                    if (!quantity || isNaN(parseFloat(quantity)) || parseFloat(quantity) <= 0) {
+                        alert(`${i + 1}行目の数量を正しく入力してください`);
+                        return false;
+                    }
+                    
+                    if (!price || isNaN(parseFloat(price)) || parseFloat(price) < 0) {
+                        alert(`${i + 1}行目の単価を正しく入力してください`);
+                        return false;
+                    }
+                }
+                
+                return true;
+            }
+        });
+    </script>
+</body>
+</html>
